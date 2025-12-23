@@ -41,8 +41,8 @@ export default function StatCard({ title, value, percent, color = "indigo" }: Pr
         <div className="w-full mt-2">
           <div className="w-full bg-slate-100 h-1 rounded-full overflow-hidden">
             <div
-              className={`${progressColorClass(percent)} h-1 rounded-full`}
-              style={{ width: `${Math.min(100, Math.max(0, percent))}%` }}
+              className={`${progressColorClass(percent)} h-1 rounded-full transition-all duration-500 ease-out`}
+              style={{ width: `${Math.min(100, Math.max(0, percent))}%`, willChange: 'width' }}
             />
           </div>
         </div>
