@@ -16,15 +16,46 @@ class PemantauServer {
   private batasRiwayat = 300; // jumlah titik maksimum di memori (mis. 300 * 2s = 10 menit)
   private pembuatInterval: NodeJS.Timeout | null = null;
   private alertTerakhir: BacaanServer | null = null;
+  private terakhirPembersihan = 0; // timestamp ms terakhir pembersihan manual
 
   constructor() {
+    // Debug: konfirmasi inisialisasi
+    // eslint-disable-next-line no-console
+    console.info("[PemantauServer] Inisialisasi PemantauServer, mempersiapkan koleksi dan memulai simulasi...");
+    // Pastikan koleksi/index siap, lalu mulai simulasi
+    void this.setupKoleksiDanMulai();
+  }
+
+  private async setupKoleksiDanMulai() {
+    try {
+      const koleksiRiwayat = await dapatkanKoleksi("history");
+      // Buat TTL index agar dokumen lebih dari 1 hari otomatis dihapus (86400 detik)
+      await koleksiRiwayat.createIndex({ waktu: 1 }, { expireAfterSeconds: 86400 });
+
+      // Index waktu pada alerts juga berguna
+      const koleksiAlerts = await dapatkanKoleksi("alerts");
+      await koleksiAlerts.createIndex({ waktu: 1 });
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error("[PemantauServer] Gagal membuat index koleksi:", err);
+    }
+
     this.mulaiSimulasi();
   }
 
   // Mulai simulasi (setInterval tiap 2 detik)
   public mulaiSimulasi() {
     if (this.pembuatInterval) return;
-    this.pembuatInterval = setInterval(() => this.buatBacaan(), 2000);
+
+    // Buat bacaan awal segera agar klien tidak mendapatkan data kosong
+    void this.buatBacaan().catch((err) => {
+      // eslint-disable-next-line no-console
+      console.error("[PemantauServer] Gagal membuat bacaan awal:", err);
+    });
+
+    this.pembuatInterval = setInterval(() => {
+      void this.buatBacaan();
+    }, 2000);
   }
 
   // Hentikan (untuk keperluan test atau cleanup)
@@ -33,6 +64,14 @@ class PemantauServer {
       clearInterval(this.pembuatInterval);
       this.pembuatInterval = null;
     }
+  }
+
+  // expose untuk testing: buat satu bacaan secara manual
+  public async buatBacaanSekali(): Promise<BacaanServer> {
+    await this.buatBacaan();
+    const terbaru = this.ambilStatusTerbaru();
+    if (!terbaru) throw new Error("Gagal membuat bacaan");
+    return terbaru;
   }
 
   // Menghasilkan bacaan acak dan memeriksa alert threshold
@@ -58,11 +97,37 @@ class PemantauServer {
       bacaan.pesanAlert = bacaan.pesanAlert ? `${bacaan.pesanAlert}; ${pesan}` : pesan;
     }
 
+    // Debug: ringkasan singkat bacaan
+    // eslint-disable-next-line no-console
+    console.debug("[PemantauServer] Bacaan baru:", {
+      waktu: bacaan.waktu,
+      cpu: +bacaan.cpu.toFixed(1),
+      suhu: +bacaan.suhu.toFixed(1),
+      alert: bacaan.alert,
+    });
+
     // Simpan ke riwayat lokal
     this.riwayat.push(bacaan);
     if (this.riwayat.length > this.batasRiwayat) this.riwayat.shift();
 
-    // Jika ada alert, simpan ke DB collection 'alerts' dan simpan alertTerakhir
+    // Persist ke MongoDB collection 'history'
+    try {
+      const koleksiRiwayat = await dapatkanKoleksi("history");
+      await koleksiRiwayat.insertOne({
+        waktu: new Date(bacaan.waktu),
+        cpu: bacaan.cpu,
+        mem: bacaan.mem,
+        disk: bacaan.disk,
+        suhu: bacaan.suhu,
+        alert: bacaan.alert ?? false,
+        pesan: bacaan.pesanAlert ?? null,
+      });
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error("[PemantauServer] Gagal menyimpan riwayat ke DB:", err);
+    }
+
+    // Jika ada alert, simpan juga ke koleksi 'alerts' dan simpan alertTerakhir
     if (bacaan.alert) {
       this.alertTerakhir = bacaan;
       try {
@@ -74,11 +139,25 @@ class PemantauServer {
           pesan: bacaan.pesanAlert,
         });
       } catch (err) {
-        // Tidak menggagalkan proses simulasi; log di konsol untuk debugging
-        // (Jangan gunakan console.log di production heavy workloads tanpa logger)
         // eslint-disable-next-line no-console
-        console.error("Gagal menyimpan alert ke DB:", err);
+        console.error("[PemantauServer] Gagal menyimpan alert ke DB:", err);
       }
+    }
+
+    // Pembersihan manual sebagai fallback: setiap jam, hapus dokumen > 1 hari
+    try {
+      const sekarang = Date.now();
+      if (sekarang - this.terakhirPembersihan > 1000 * 60 * 60) {
+        const koleksiRiwayat = await dapatkanKoleksi("history");
+        const cutoff = new Date(sekarang - 24 * 60 * 60 * 1000);
+        await koleksiRiwayat.deleteMany({ waktu: { $lt: cutoff } });
+        this.terakhirPembersihan = sekarang;
+        // eslint-disable-next-line no-console
+        console.info("[PemantauServer] Pembersihan riwayat: dokumen lebih dari 1 hari dihapus (fallback)");
+      }
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error("[PemantauServer] Gagal menjalankan pembersihan fallback:", err);
     }
   }
 
