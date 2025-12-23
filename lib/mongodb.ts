@@ -1,4 +1,4 @@
-import { MongoClient, Db } from "mongodb";
+import { MongoClient, Db, Document, Collection } from "mongodb";
 
 // Util koneksi MongoDB (nama fungsi dan variabel berbahasa Indonesia)
 const MONGODB_URI = process.env.MONGODB_URI ?? "mongodb://127.0.0.1:27017/monitoring";
@@ -14,7 +14,7 @@ export async function sambungkanMongo(): Promise<Db> {
   return dbInstansi;
 }
 
-export async function dapatkanKoleksi<T = any>(namaKoleksi: string) {
+export async function dapatkanKoleksi<T extends Document = Document>(namaKoleksi: string): Promise<Collection<T>> {
   const db = await sambungkanMongo();
   return db.collection<T>(namaKoleksi);
 }

@@ -3,11 +3,23 @@ import { Server as IOServer } from 'socket.io';
 import { pemantauServer } from '../../services/pemantauServer';
 import { generateResponseFromGemini } from '../../lib/gemini';
 
-export default function handler(req: NextApiRequest, res: NextApiResponse) {
-  // @ts-ignore - attach to the server socket once
-  if (!res.socket.server.io) {
+// Augment response type to include the Node socket server with optional `io`
+type NextApiResponseWithSocket = NextApiResponse & {
+  socket: any & { server?: any & { io?: IOServer } };
+};
+
+export default function handler(req: NextApiRequest, res: NextApiResponseWithSocket) {
+  // Ensure socket server exists; if not, end early
+  if (!res.socket || !res.socket.server) {
+    res.status(500).end('No socket server available');
+    return;
+  }
+
+  const server = res.socket.server as any & { io?: IOServer };
+
+  if (!server.io) {
     // Create new Socket.IO server and attach
-    const io = new IOServer(res.socket.server as any, {
+    const io = new IOServer(server, {
       path: '/socket.io',
       cors: { origin: '*' },
     });
@@ -34,8 +46,7 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
       });
     });
 
-    // @ts-ignore
-    res.socket.server.io = io;
+    server.io = io;
   }
 
   res.end();
