@@ -8,6 +8,8 @@ Deskripsi singkat: layanan backend berbasis Next.js (App Router) yang mensimulas
 - Logika `Alert Threshold`: jika CPU > 90% atau suhu > 80°C, status alert disimpan ke koleksi `alerts` di MongoDB.
 - Endpoint GET `/api/server-status` untuk mengambil status terbaru, riwayat (array titik), dan alert terakhir.
 - Endpoint POST `/api/server-status/generate` untuk memaksa pembuatan 1 bacaan (berguna untuk testing).
+- Endpoint GET `/api/server-status/history` untuk mengambil riwayat yang tersimpan di DB (query: `?limit=60`).
+- Endpoint GET `/api/alerts` untuk melihat log alert terbaru.
 - Riwayat bacaan disimpan di koleksi `history` pada MongoDB dan otomatis dihapus setelah 1 hari (TTL). 
 - Endpoint POST `/api/email` untuk menyimpan alamat email pengguna ke koleksi `emails`.
 
