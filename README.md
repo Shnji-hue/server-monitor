@@ -41,7 +41,12 @@ Contoh respon GET `/api/server-status`:
 ## Environment
 
 - `MONGODB_URI` - URL koneksi MongoDB (mis. `mongodb://127.0.0.1:27017/monitoring`)
+- `GEMINI_API_URL` - Endpoint Gemini API (contoh: `https://generativelanguage.googleapis.com/v1beta2/models/gemini-1.5-flash:generateText`)
+- `GEMINI_API_KEY` - API key untuk Gemini (simpan di `.env.local`, jangan commit ke repo)
+- `GOOGLE_GENERATIVE_AI_API_KEY` - (alternate) Google Generative API key used by server actions
+- `SOCKET_AUTH_SECRET` - HMAC secret for issuing ephemeral socket tokens (set in `.env.local`)
 
+> Note: This project can run with a custom server (see `server.js`) to enable Socket.io with auth & rate-limiting. Use `npm run dev:custom` to start the custom server during development.
 ## Cara menjalankan (development)
 
 1. Pastikan `MONGODB_URI` terpasang di `.env.local`.

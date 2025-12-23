@@ -7,6 +7,8 @@ import dynamic from 'next/dynamic';
 import { BacaanServer } from '../../services/pemantauServer';
 
 const ChartsGrid = dynamic(() => import('../../components/ChartsGrid'), { ssr: false });
+const ChatWidget = dynamic(() => import('../../components/ChatWidget'), { ssr: false });
+const ChatBox = dynamic(() => import('../../components/ChatBox'), { ssr: false });
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -37,6 +39,16 @@ export default function DashboardPage() {
 
       <div>
         <ChartsGrid />
+      </div>
+
+      {/* Chat widget (floating) */}
+      <ChatWidget />
+
+      {/* Inline ChatBox (Server Actions) - useful for testing the Gemini call */}
+      <div className="mt-6">
+        <div className="max-w-3xl">
+          <ChatBox />
+        </div>
       </div>
     </div>
   );

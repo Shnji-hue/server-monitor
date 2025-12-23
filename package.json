@@ -8,8 +8,10 @@
   },
   "scripts": {
     "dev": "next dev",
+    "dev:custom": "node server.js",
     "build": "next build",
     "start": "next start",
+    "start:custom": "NODE_ENV=production node server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -34,7 +36,12 @@
     "autoprefixer": "^10.4.14",
     "swr": "^2.2.0",
     "lucide-react": "^0.562.0",
-    "recharts": "^2.5.0"
+    "recharts": "^2.5.0",
+    "socket.io": "^4.7.2",
+    "socket.io-client": "^4.7.2",
+    "@google/generative-ai": "^0.2.0",
+    "jsonwebtoken": "^9.0.0",
+    "dotenv": "^16.1.4"
   },
   "devDependencies": {
     "@types/node": "^25.0.3",
