@@ -81,3 +81,19 @@ export async function ambilEmailUserDariSesiAktif() {
   const users = await usersCol.find({ _id: { $in: userIds } }).toArray();
   return users.map((u) => u.email);
 }
+
+export async function ambilUserDariToken(token: string) {
+  // Ambil user singkat (email, id) berdasarkan token sesi (server-side helper)
+  try {
+    const sess = await temukanSession(token);
+    if (!sess) return null;
+    const usersCol = await dapatkanKoleksi<User>("users");
+    const user = await usersCol.findOne({ _id: sess.userId });
+    if (!user) return null;
+    return { id: user._id, email: user.email };
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error("[auth] ambilUserDariToken error:", err);
+    return null;
+  }
+}
