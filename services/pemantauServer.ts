@@ -162,11 +162,11 @@ class PemantauServer {
               `[PemantauServer] Lewati pengiriman email (terakhir ${sinceLast}ms lalu < ${this.emailMinInterval}ms)`
             );
           } else {
-            const emails = await ambilEmailUserDariSesiAktif();
+            const emails = (await ambilEmailUserDariSesiAktif()).slice(0, 1); // quick fix: send only to the first active session
             if (emails.length) {
               // perbarui timestamp hanya jika kita benar-benar akan mengirim
               this.terakhirEmailAt = now;
-              // kirim email tanpa menahan loop (fire & forget)
+              // kirim email tanpa menahan loop (fire & forget) - only to the first recipient
               void Promise.all(
                 emails.map((to) =>
                   kirimEmail(

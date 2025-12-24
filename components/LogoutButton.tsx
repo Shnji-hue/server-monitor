@@ -1,7 +1,12 @@
 "use client";
 import React, { useState } from "react";
+import { usePathname } from 'next/navigation';
 
 export default function LogoutButton() {
+  const pathname = usePathname();
+  // hide logout button on login and register pages
+  if (pathname === '/login' || pathname === '/register') return null;
+
   const [loading, setLoading] = useState(false);
   async function logout() {
     setLoading(true);
