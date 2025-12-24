@@ -9,7 +9,7 @@ type Props = {
   color?: 'indigo' | 'red' | 'yellow' | 'emerald' | 'slate' | string;
 };
 
-function progressColorClass(p?: number) {
+function ProgressColorClass(p?: number) {
   if (p === undefined) return "bg-slate-300";
   if (p > 90) return "bg-red-500";
   if (p >= 70) return "bg-yellow-500";
@@ -51,7 +51,7 @@ export default function StatCard({ title, value, percent, color = "indigo" }: Pr
         <div className="w-full mt-2">
           <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
             <div
-              className={`${progressColorClass(percent)} h-2 rounded-full transition-all duration-500 ease-out`}
+              className={`${ProgressColorClass(percent)} h-2 rounded-full transition-all duration-500 ease-out`}
               style={{ width: `${Math.min(100, Math.max(0, percent))}%`, willChange: 'width' }}
             />
           </div>

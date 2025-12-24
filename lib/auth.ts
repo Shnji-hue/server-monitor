@@ -1,5 +1,5 @@
 import crypto from "crypto";
-import { dapatkanKoleksi } from "./mongodb";
+import { DapatkanKoleksi } from "./mongodb";
 
 type User = {
   _id?: any;
@@ -8,28 +8,28 @@ type User = {
   createdAt?: Date;
 };
 
-export async function buatUser(email: string, password: string) {
-  const koleksi = await dapatkanKoleksi<User>("users");
+export async function BuatUser(email: string, password: string) {
+  const koleksi = await DapatkanKoleksi<User>("users");
   const exist = await koleksi.findOne({ email });
   if (exist) throw new Error("Email sudah terdaftar");
 
-  const passwordHash = hashPassword(password);
+  const passwordHash = HashPassword(password);
   const res = await koleksi.insertOne({ email, passwordHash, createdAt: new Date() });
   return { id: res.insertedId, email };
 }
 
-export async function temukanUserByEmail(email: string) {
-  const koleksi = await dapatkanKoleksi<User>("users");
+export async function TemukanUserByEmail(email: string) {
+  const koleksi = await DapatkanKoleksi<User>("users");
   return koleksi.findOne({ email });
 }
 
-export function hashPassword(password: string) {
+export function HashPassword(password: string) {
   const salt = crypto.randomBytes(16).toString("hex");
   const derived = crypto.scryptSync(password, salt, 64);
   return `${salt}:${derived.toString("hex")}`;
 }
 
-export function verifyPassword(password: string, stored: string) {
+export function VerifyPassword(password: string, stored: string) {
   const [salt, hash] = stored.split(":");
   if (!salt || !hash) return false;
   const derived = crypto.scryptSync(password, salt, 64).toString("hex");
@@ -37,8 +37,8 @@ export function verifyPassword(password: string, stored: string) {
 }
 
 // Sessions
-export async function buatSession(userId: any) {
-  const koleksi = await dapatkanKoleksi("sessions");
+export async function BuatSession(userId: any) {
+  const koleksi = await DapatkanKoleksi("sessions");
   const token = crypto.randomBytes(32).toString("hex");
   const maxAge = Number(process.env.SESSION_MAX_AGE ?? 7 * 24 * 3600); // detik
   const now = Date.now();
@@ -52,8 +52,8 @@ export async function buatSession(userId: any) {
   return { token, expiresAt: doc.expiresAt };
 }
 
-export async function temukanSession(token: string) {
-  const koleksi = await dapatkanKoleksi("sessions");
+export async function TemukanSession(token: string) {
+  const koleksi = await DapatkanKoleksi("sessions");
   if (!token) return null;
   const sess = await koleksi.findOne({ token });
   if (!sess) return null;
@@ -64,16 +64,16 @@ export async function temukanSession(token: string) {
   return sess;
 }
 
-export async function hapusSession(token: string) {
+export async function HapusSession(token: string) {
   if (!token) return;
-  const koleksi = await dapatkanKoleksi("sessions");
+  const koleksi = await DapatkanKoleksi("sessions");
   await koleksi.deleteOne({ token });
 }
 
-export async function ambilEmailUserDariSesiAktif() {
+export async function AmbilEmailUserDariSesiAktif() {
   // Kembalikan daftar email unik dari sesi aktif (ungrouped)
-  const koleksi = await dapatkanKoleksi("sessions");
-  const usersCol = await dapatkanKoleksi<User>("users");
+  const koleksi = await DapatkanKoleksi("sessions");
+  const usersCol = await DapatkanKoleksi<User>("users");
   const sekarang = new Date();
   const sesi = await koleksi.find({ expiresAt: { $gt: sekarang } }).toArray();
   const userIds = Array.from(new Set(sesi.map((s: any) => s.userId)));
@@ -82,12 +82,12 @@ export async function ambilEmailUserDariSesiAktif() {
   return users.map((u) => u.email);
 }
 
-export async function ambilUserDariToken(token: string) {
+export async function AmbilUserDariToken(token: string) {
   // Ambil user singkat (email, id) berdasarkan token sesi (server-side helper)
   try {
-    const sess = await temukanSession(token);
+    const sess = await TemukanSession(token);
     if (!sess) return null;
-    const usersCol = await dapatkanKoleksi<User>("users");
+    const usersCol = await DapatkanKoleksi<User>("users");
     const user = await usersCol.findOne({ _id: sess.userId });
     if (!user) return null;
     return { id: user._id, email: user.email };

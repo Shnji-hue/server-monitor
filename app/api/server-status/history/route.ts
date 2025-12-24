@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { dapatkanKoleksi } from "../../../../lib/mongodb";
+import { DapatkanKoleksi } from "../../../../lib/mongodb";
 
 export async function GET(req: NextRequest) {
   try {
@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
     const limit = limitParam ? Math.max(1, parseInt(limitParam, 10)) : 120;
     const metric = url.searchParams.get("metric"); // optional: cpu|mem|disk|suhu
 
-    const koleksi = await dapatkanKoleksi("history");
+    const koleksi = await DapatkanKoleksi("history");
     const docs = await koleksi.find().sort({ waktu: -1 }).limit(limit).toArray();
 
     // Jika metric diberikan, kembalikan array sederhana { waktu, value }

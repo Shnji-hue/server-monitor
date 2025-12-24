@@ -49,15 +49,15 @@ export default function WidgetObrolan() {
           SetMessages((m) => m.concat([{ id: String(Date.now()), from: 'system', text: 'Socket server not ready yet; attempting connection (may fallback to polling)...', time: new Date().toLocaleTimeString() }]));
         }
 
-        const tokenRes = await fetch('/api/socket-token');
-        const json = await tokenRes.json();
+        const TokenRes = await fetch('/api/socket-token');
+        const Json = await TokenRes.json();
         if (!mounted) return;
-        const token = json?.token;
-        if (!token) throw new Error('No token returned');
-        console.info('[chat] fetched socket token:', token?.slice(0, 8), '...');
+        const Token = Json?.token;
+        if (!Token) throw new Error('No token returned');
+        console.info('[chat] fetched socket token:', Token?.slice(0, 8), '...');
 
         // connect with auth token; prefer websocket but allow polling fallback
-        const SClient = io({ auth: { token }, query: { token }, transports: ['websocket', 'polling'], path: '/socket.io', reconnectionAttempts: 5, timeout: 5000 });
+        const SClient = io({ auth: { token: Token }, query: { token: Token }, transports: ['websocket', 'polling'], path: '/socket.io', reconnectionAttempts: 5, timeout: 5000 });
         SetSocketClient(SClient);
 
         SClient.on('connect', () => {

@@ -5,7 +5,7 @@ const MONGODB_URI = process.env.MONGODB_URI ?? "mongodb://127.0.0.1:27017/monito
 let klien: MongoClient | null = null;
 let dbInstansi: Db | null = null;
 
-export async function sambungkanMongo(): Promise<Db> {
+export async function SambungkanMongo(): Promise<Db> {
   if (dbInstansi) return dbInstansi;
   if (!klien) klien = new MongoClient(MONGODB_URI);
   if (!klien) throw new Error("Gagal membuat MongoClient");
@@ -14,7 +14,7 @@ export async function sambungkanMongo(): Promise<Db> {
   return dbInstansi;
 }
 
-export async function dapatkanKoleksi<T extends Document = Document>(namaKoleksi: string): Promise<Collection<T>> {
-  const db = await sambungkanMongo();
+export async function DapatkanKoleksi<T extends Document = Document>(namaKoleksi: string): Promise<Collection<T>> {
+  const db = await SambungkanMongo();
   return db.collection<T>(namaKoleksi);
 }

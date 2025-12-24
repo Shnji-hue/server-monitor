@@ -1,6 +1,6 @@
-import { dapatkanKoleksi } from "../lib/mongodb";
-import { ambilEmailUserDariSesiAktif } from "../lib/auth";
-import { kirimEmail } from "../lib/email";
+import { DapatkanKoleksi } from "../lib/mongodb";
+import { AmbilEmailUserDariSesiAktif } from "../lib/auth";
+import { KirimEmail } from "../lib/email";
 
 // Tipe data bacaan server (disesuaikan agar mudah dikonsumsi Chart.js/Recharts)
 export type BacaanServer = {
@@ -22,7 +22,8 @@ class PemantauServer {
 
   // Email rate limiting: track last email sent time (ms) and minimum interval
   private terakhirEmailAt = 0; // timestamp ms terakhir email terkirim
-  private emailMinInterval = Number(process.env.EMAIL_MIN_INTERVAL_MS ?? 60000); // default 60s
+  // Default minimum interval: 3 minutes (180000 ms). Can be overridden via env EMAIL_MIN_INTERVAL_MS
+  private emailMinInterval = Number(process.env.EMAIL_MIN_INTERVAL_MS ?? 3 * 60 * 1000); // default 3 minutes
 
   constructor() {
     // Debug: konfirmasi inisialisasi
@@ -34,12 +35,12 @@ class PemantauServer {
 
   private async setupKoleksiDanMulai() {
     try {
-      const koleksiRiwayat = await dapatkanKoleksi("history");
+      const koleksiRiwayat = await DapatkanKoleksi("history");
       // Buat TTL index agar dokumen lebih dari 1 hari otomatis dihapus (86400 detik)
       await koleksiRiwayat.createIndex({ waktu: 1 }, { expireAfterSeconds: 86400 });
 
       // Index waktu pada alerts juga berguna
-      const koleksiAlerts = await dapatkanKoleksi("alerts");
+      const koleksiAlerts = await DapatkanKoleksi("alerts");
       await koleksiAlerts.createIndex({ waktu: 1 });
     } catch (err) {
       // eslint-disable-next-line no-console
@@ -118,7 +119,7 @@ class PemantauServer {
 
     // Persist ke MongoDB collection 'history'
     try {
-      const koleksiRiwayat = await dapatkanKoleksi("history");
+      const koleksiRiwayat = await DapatkanKoleksi("history");
       await koleksiRiwayat.insertOne({
         waktu: new Date(bacaan.waktu),
         cpu: bacaan.cpu,
@@ -138,7 +139,7 @@ class PemantauServer {
       const isNewAlert = !this.alertTerakhir || this.alertTerakhir.waktu !== bacaan.waktu;
       // Simpan ke DB
       try {
-        const koleksi = await dapatkanKoleksi("alerts");
+        const koleksi = await DapatkanKoleksi("alerts");
         await koleksi.insertOne({
           waktu: new Date(bacaan.waktu),
           cpu: bacaan.cpu,
@@ -162,14 +163,14 @@ class PemantauServer {
               `[PemantauServer] Lewati pengiriman email (terakhir ${sinceLast}ms lalu < ${this.emailMinInterval}ms)`
             );
           } else {
-            const emails = (await ambilEmailUserDariSesiAktif()).slice(0, 1); // quick fix: send only to the first active session
+            const emails = (await AmbilEmailUserDariSesiAktif()).slice(0, 1); // quick fix: send only to the first active session
             if (emails.length) {
               // perbarui timestamp hanya jika kita benar-benar akan mengirim
               this.terakhirEmailAt = now;
               // kirim email tanpa menahan loop (fire & forget) - only to the first recipient
               void Promise.all(
                 emails.map((to) =>
-                  kirimEmail(
+                  KirimEmail(
                     to,
                     `ALERT: ${bacaan.pesanAlert}`,
                     `Terdeteksi alert pada server:\n${bacaan.pesanAlert}\nWaktu: ${new Date(bacaan.waktu).toLocaleString()}`
@@ -189,7 +190,7 @@ class PemantauServer {
     try {
       const sekarang = Date.now();
       if (sekarang - this.terakhirPembersihan > 1000 * 60 * 60) {
-        const koleksiRiwayat = await dapatkanKoleksi("history");
+        const koleksiRiwayat = await DapatkanKoleksi("history");
         const cutoff = new Date(sekarang - 24 * 60 * 60 * 1000);
         await koleksiRiwayat.deleteMany({ waktu: { $lt: cutoff } });
         this.terakhirPembersihan = sekarang;
@@ -225,5 +226,5 @@ class PemantauServer {
 }
 
 // Ekspor singleton sehingga simulasi berjalan sekali di server
-export const pemantauServer = new PemantauServer();
+export const PemantauServerSingleton = new PemantauServer();
 export default PemantauServer;

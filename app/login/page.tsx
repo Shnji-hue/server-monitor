@@ -2,32 +2,32 @@
 import React, { useState } from "react";
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [Email, SetEmail] = useState("");
+  const [Password, SetPassword] = useState("");
+  const [Error, SetError] = useState<string | null>(null);
+  const [Loading, SetLoading] = useState(false);
 
-  async function submit(e: React.FormEvent) {
+  async function KirimMasuk(e: React.FormEvent) {
     e.preventDefault();
-    setError(null);
-    setLoading(true);
+    SetError(null);
+    SetLoading(true);
     try {
       const r = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email: Email, password: Password }),
       });
       const j = await r.json();
       if (!r.ok) {
-        setError(j.pesan || "Login gagal");
+        SetError(j.pesan || "Login gagal");
       } else {
         // cookie sudah diset oleh server
         window.location.href = "/dashboard";
       }
     } catch (err) {
-      setError("Gagal menghubungi server");
+      SetError("Gagal menghubungi server");
     } finally {
-      setLoading(false);
+      SetLoading(false);
     }
   }
 
@@ -46,12 +46,12 @@ export default function LoginPage() {
           <p className="text-sm text-slate-400 mt-2 text-center max-w-[22rem]">Masuk untuk memantau performa server Anda secara real-time.</p>
         </div>
 
-        <form onSubmit={submit} className="mt-8 space-y-4">
+        <form onSubmit={KirimMasuk} className="mt-8 space-y-4">
           <div>
             <label className="block text-sm font-medium text-slate-300">Email</label>
             <input
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              value={Email}
+              onChange={(e) => SetEmail(e.target.value)}
               type="email"
               required
               className="mt-2 block w-full px-4 py-3 rounded-lg bg-slate-900 text-white border border-white/10 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
@@ -61,22 +61,22 @@ export default function LoginPage() {
           <div>
             <label className="block text-sm font-medium text-slate-300">Password</label>
             <input
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              value={Password}
+              onChange={(e) => SetPassword(e.target.value)}
               type="password"
               required
               className="mt-2 block w-full px-4 py-3 rounded-lg bg-slate-900 text-white border border-white/10 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>
 
-          {error && <div className="text-red-400 text-sm mt-1">{error}</div>}
+          {Error && <div className="text-red-400 text-sm mt-1">{Error}</div>}
 
           <div>
             <button
-              disabled={loading}
+              disabled={Loading}
               className="w-full py-3 rounded-lg bg-indigo-600 hover:bg-indigo-700 transition-colors text-white font-semibold shadow-md"
             >
-              {loading ? "Memproses..." : "Masuk"}
+              {Loading ? "Memproses..." : "Masuk"}
             </button>
           </div>
 

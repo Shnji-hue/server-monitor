@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { pemantauServer } from "../../../../services/pemantauServer";
+import { PemantauServerSingleton } from "../../../../services/pemantauServer";
 
 export async function POST(_req: NextRequest) {
   try {
-    const bacaan = await pemantauServer.buatBacaanSekali();
+    const bacaan = await PemantauServerSingleton.buatBacaanSekali();
     return NextResponse.json({ sukses: true, data: bacaan }, { status: 200 });
   } catch (err) {
     // eslint-disable-next-line no-console

@@ -1,7 +1,7 @@
 import '../styles/globals.css';
 import React from 'react';
 import { cookies } from 'next/headers';
-import { ambilUserDariToken } from '../lib/auth';
+import { AmbilUserDariToken } from '../lib/auth';
 import LogoutButton from '../components/LogoutButton';
 
 export const metadata = {
@@ -13,7 +13,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   // server-side: check cookie session and resolve user
   const cookieStore = await cookies();
   const sessionToken = cookieStore.get?.('session')?.value;
-  const user = sessionToken ? await ambilUserDariToken(sessionToken) : null;
+  const user = sessionToken ? await AmbilUserDariToken(sessionToken) : null;
 
   return (
     <html lang="id" className="font-sans">

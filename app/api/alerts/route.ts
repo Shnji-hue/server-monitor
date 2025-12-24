@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { dapatkanKoleksi } from "../../../lib/mongodb";
+import { DapatkanKoleksi } from "../../../lib/mongodb";
 
 export async function GET(req: NextRequest) {
   try {
@@ -8,7 +8,7 @@ export async function GET(req: NextRequest) {
     const limitParam = url.searchParams.get("limit");
     const limit = limitParam ? Math.max(1, parseInt(limitParam, 10)) : 20;
 
-    const koleksi = await dapatkanKoleksi("alerts");
+    const koleksi = await DapatkanKoleksi("alerts");
     const docs = await koleksi.find().sort({ waktu: -1 }).limit(limit).toArray();
 
     const hasil = docs.map((d: any) => ({ pesan: d.pesan, waktu: d.waktu }));

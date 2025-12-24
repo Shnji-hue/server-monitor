@@ -2,34 +2,34 @@
 import React, { useState } from "react";
 
 export default function RegisterPage() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [Email, SetEmail] = useState("");
+  const [Password, SetPassword] = useState("");
+  const [Error, SetError] = useState<string | null>(null);
+  const [Success, SetSuccess] = useState<string | null>(null);
+  const [Loading, SetLoading] = useState(false);
 
-  async function submit(e: React.FormEvent) {
+  async function KirimPendaftaran(e: React.FormEvent) {
     e.preventDefault();
-    setError(null);
-    setSuccess(null);
-    setLoading(true);
+    SetError(null);
+    SetSuccess(null);
+    SetLoading(true);
     try {
       const r = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email: Email, password: Password }),
       });
       const j = await r.json();
       if (!r.ok) {
-        setError(j.pesan || "Gagal mendaftar");
+        SetError(j.pesan || "Gagal mendaftar");
       } else {
-        setSuccess("Pendaftaran berhasil. Silakan masuk.");
+        SetSuccess("Pendaftaran berhasil. Silakan masuk.");
         setTimeout(() => (window.location.href = "/login"), 1200);
       }
     } catch (err) {
-      setError("Gagal menghubungi server");
+      SetError("Gagal menghubungi server");
     } finally {
-      setLoading(false);
+      SetLoading(false);
     }
   }
 
@@ -48,12 +48,12 @@ export default function RegisterPage() {
           <p className="text-sm text-slate-400 mt-2 text-center max-w-[22rem]">Buat akun untuk mulai memantau server Anda secara real-time.</p>
         </div>
 
-        <form onSubmit={submit} className="mt-8 space-y-4">
+        <form onSubmit={KirimPendaftaran} className="mt-8 space-y-4">
           <div>
             <label className="block text-sm font-medium text-slate-300">Email</label>
             <input
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              value={Email}
+              onChange={(e) => SetEmail(e.target.value)}
               type="email"
               required
               className="mt-2 block w-full px-4 py-3 rounded-lg bg-slate-900 text-white border border-white/10 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
@@ -63,23 +63,23 @@ export default function RegisterPage() {
           <div>
             <label className="block text-sm font-medium text-slate-300">Password</label>
             <input
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              value={Password}
+              onChange={(e) => SetPassword(e.target.value)}
               type="password"
               required
               className="mt-2 block w-full px-4 py-3 rounded-lg bg-slate-900 text-white border border-white/10 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>
 
-          {error && <div className="text-red-400 text-sm mt-1">{error}</div>}
-          {success && <div className="text-green-400 text-sm mt-1">{success}</div>}
+          {Error && <div className="text-red-400 text-sm mt-1">{Error}</div>}
+          {Success && <div className="text-green-400 text-sm mt-1">{Success}</div>}
 
           <div>
             <button
-              disabled={loading}
+              disabled={Loading}
               className="w-full py-3 rounded-lg bg-indigo-600 hover:bg-indigo-700 transition-colors text-white font-semibold shadow-md"
             >
-              {loading ? "Memproses..." : "Daftar"}
+              {Loading ? "Memproses..." : "Daftar"}
             </button>
           </div>
 

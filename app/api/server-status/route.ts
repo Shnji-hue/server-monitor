@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { pemantauServer } from "../../../services/pemantauServer";
+import { PemantauServerSingleton } from "../../../services/pemantauServer";
 import type { NextRequest } from "next/server";
 
 // Endpoint GET /api/server-status
@@ -10,9 +10,9 @@ export async function GET(req: NextRequest) {
     const limitParam = url.searchParams.get("limit");
     const limit = limitParam ? Math.max(1, parseInt(limitParam, 10)) : 120;
 
-    const terbaru = pemantauServer.ambilStatusTerbaru();
-    const riwayat = pemantauServer.ambilRiwayat(limit);
-    const alertTerakhir = pemantauServer.ambilAlertTerakhir();
+    const terbaru = PemantauServerSingleton.ambilStatusTerbaru();
+    const riwayat = PemantauServerSingleton.ambilRiwayat(limit);
+    const alertTerakhir = PemantauServerSingleton.ambilAlertTerakhir();
 
     return NextResponse.json(
       {

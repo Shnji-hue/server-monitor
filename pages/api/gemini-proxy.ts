@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { generateResponseFromGemini } from '../../lib/gemini';
+import { GenerateResponseDariGemini } from '../../lib/gemini';
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'Method not allowed' });
@@ -17,13 +17,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         snapshot
       )}. Jawab pertanyaan user dengan singkat dan solutif.`;
 
-      const text = await generateResponseFromGemini(systemPrompt, userMessage);
+      const text = await GenerateResponseDariGemini(systemPrompt, userMessage);
       res.status(200).json({ success: true, text });
     } catch (innerErr: any) {
       console.error('[gemini-proxy] Failed to build system prompt:', innerErr);
       // Still attempt to call Gemini with generic prompt
       const systemPrompt = 'Anda adalah asisten teknis server. Jawab pertanyaan user dengan singkat dan solutif.';
-      const text = await generateResponseFromGemini(systemPrompt, userMessage);
+      const text = await GenerateResponseDariGemini(systemPrompt, userMessage);
       res.status(200).json({ success: true, text });
     }
   } catch (err: any) {

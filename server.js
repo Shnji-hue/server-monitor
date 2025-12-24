@@ -9,7 +9,7 @@ const app = next({ dev });
 const handle = app.getRequestHandler();
 const port = parseInt(process.env.PORT ?? '3000', 10);
 
-function getSocketSecret() {
+function GetSocketSecret() {
   return process.env.SOCKET_AUTH_SECRET || 'please_set_SOCKET_AUTH_SECRET_in_env';
 }
 // Note: do not read the secret at import time, Next may load .env later in dev mode
@@ -40,7 +40,7 @@ class RateLimiter {
 
 const limiter = new RateLimiter(12, 60_000); // 12 messages per minute
 
-async function callGeminiProxy(systemPrompt, userMessage) {
+async function PanggilGeminiProxy(systemPrompt, userMessage) {
   // call internal Next API (gemini-proxy) so server-only API key logic is used
   const url = `http://localhost:${port}/api/gemini-proxy`;
   const res = await fetch(url, {
@@ -68,7 +68,7 @@ app.prepare().then(() => {
     }
     console.info('[socket] verifying token (prefix):', String(token).slice(0, 8), '...');
     try {
-      const secret = getSocketSecret();
+      const secret = GetSocketSecret();
       const payload = jwt.verify(token, secret);
       // optionally attach payload to socket
       socket.data.payload = payload;
@@ -78,7 +78,7 @@ app.prepare().then(() => {
       // attempt to decode the token to aid debugging
       try {
         const decoded = jwt.decode(token);
-        console.error('[socket] JWT verify failed:', err?.message ?? err, 'decoded:', decoded, 'current secret prefix:', String(getSocketSecret()).slice(0, 8));
+        console.error('[socket] JWT verify failed:', err?.message ?? err, 'decoded:', decoded, 'current secret prefix:', String(GetSocketSecret()).slice(0, 8));
       } catch (decErr) {
         console.error('[socket] JWT verify failed and decode failed:', err?.message ?? err, decErr);
       }
@@ -111,7 +111,7 @@ app.prepare().then(() => {
           snapshot
         )}. Jawab pertanyaan user dengan singkat dan solutif.`;
 
-        const aiText = await callGeminiProxy(systemPrompt, text);
+        const aiText = await PanggilGeminiProxy(systemPrompt, text);
         socket.emit('ai_response', { text: aiText });
       } catch (err) {
         // eslint-disable-next-line no-console

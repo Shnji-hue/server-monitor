@@ -7,16 +7,16 @@ import dynamic from 'next/dynamic';
 import { BacaanServer } from '../../services/pemantauServer';
 
 const ChartsGrid = dynamic(() => import('../../components/ChartsGrid'), { ssr: false });
-const ChatWidget = dynamic(() => import('../../components/ChatWidget'), { ssr: false });
+const WidgetObrolan = dynamic(() => import('../../components/WidgetObrolan'), { ssr: false });
 
-const fetcher = (url: string) => fetch(url).then((r) => r.json());
+const AmbilData = (url: string) => fetch(url).then((r) => r.json());
 
 export default function DashboardPage() {
   // status tiap 2 detik
-  const { data: serverData } = useSWR('/api/server-status', fetcher, { refreshInterval: 2000, revalidateOnFocus: true });
+  const { data: serverData } = useSWR('/api/server-status', AmbilData, { refreshInterval: 2000, revalidateOnFocus: true });
 
   // alerts tiap 2 detik
-  const { data: alertsData } = useSWR('/api/alerts?limit=20', fetcher, { refreshInterval: 2000 });
+  const { data: alertsData } = useSWR('/api/alerts?limit=20', AmbilData, { refreshInterval: 2000 });
 
   const terbaru: BacaanServer | null = serverData?.data?.terbaru ?? null;
   const alerts = alertsData?.data ?? [];
@@ -41,7 +41,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Chat widget (floating) */}
-      <ChatWidget />
+      <WidgetObrolan />
 
 
     </div>

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { NextRequest } from "next/server";
-import { buatUser, temukanUserByEmail } from "../../../../lib/auth";
+import { BuatUser, TemukanUserByEmail } from "../../../../lib/auth";
 
 export async function POST(req: NextRequest) {
   try {
@@ -9,10 +9,10 @@ export async function POST(req: NextRequest) {
     const password = body.password || "";
     if (!email || !password) return NextResponse.json({ sukses: false, pesan: "Email dan password diperlukan" }, { status: 400 });
 
-    const exist = await temukanUserByEmail(email);
+    const exist = await TemukanUserByEmail(email);
     if (exist) return NextResponse.json({ sukses: false, pesan: "Email sudah terdaftar" }, { status: 409 });
 
-    const user = await buatUser(email, password);
+    const user = await BuatUser(email, password);
     return NextResponse.json({ sukses: true, data: { id: user.id, email: user.email } }, { status: 201 });
   } catch (err: any) {
     // eslint-disable-next-line no-console

@@ -9,7 +9,7 @@ const genAI = new GoogleGenerativeAI(KEY);
 // configurable model - allow override via env for testing/fallback
 const DEFAULT_MODEL = process.env.GOOGLE_GENERATIVE_AI_MODEL || 'text-bison-001';
 
-export async function generateResponseFromGemini(systemPrompt: string, userMessage: string) {
+export async function GenerateResponseDariGemini(systemPrompt: string, userMessage: string) {
   const modelName = process.env.GOOGLE_GENERATIVE_AI_MODEL || DEFAULT_MODEL;
   // Use the SDK's model accessor (may differ across versions)
   // Wrap in try/catch below if SDK doesn't expose specified model
@@ -27,7 +27,7 @@ export async function generateResponseFromGemini(systemPrompt: string, userMessa
   console.info('[gemini] using model:', modelName);
 
   // Helper to normalize various SDK responses
-  function extractText(result: any) {
+  function EkstrakTeks(result: any) {
     if (!result) return '';
 
     // Common nested shapes we've observed (probe all):
@@ -107,7 +107,7 @@ export async function generateResponseFromGemini(systemPrompt: string, userMessa
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const res = await fn.call(model, args as any);
         const resolved = await res;
-        const text = extractText(resolved);
+        const text = EkstrakTeks(resolved);
         if (text) {
           // eslint-disable-next-line no-console
           console.info('[gemini] success using method:', method);

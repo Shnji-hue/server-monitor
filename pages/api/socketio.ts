@@ -1,7 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { Server as IOServer } from 'socket.io';
-import { pemantauServer } from '../../services/pemantauServer';
-import { generateResponseFromGemini } from '../../lib/gemini';
+import { PemantauServerSingleton } from '../../services/pemantauServer';
+import { GenerateResponseDariGemini } from '../../lib/gemini';
 
 // Augment response type to include the Node socket server with optional `io`
 type NextApiResponseWithSocket = NextApiResponse & {
@@ -31,11 +31,11 @@ export default function handler(req: NextApiRequest, res: NextApiResponseWithSoc
 
         try {
           // Snapshot latest server data
-          const snapshot = pemantauServer.ambilStatusTerbaru();
+          const snapshot = PemantauServerSingleton.ambilStatusTerbaru();
           const systemPrompt = `Anda adalah asisten teknis server. Analisis data berikut: ${JSON.stringify(snapshot)}. Jawab pertanyaan user dengan singkat dan solutif.`;
 
           // Call Gemini (SDK helper)
-          const aiText = await generateResponseFromGemini(systemPrompt, payload.text);
+          const aiText = await GenerateResponseDariGemini(systemPrompt, payload.text);
 
           socket.emit('ai_response', { text: aiText });
         } catch (err) {

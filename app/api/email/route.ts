@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { dapatkanKoleksi } from "../../../lib/mongodb";
+import { DapatkanKoleksi } from "../../../lib/mongodb";
 
 // Endpoint POST /api/email
 // Body: { email: string }
@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ sukses: false, pesan: "Email tidak valid" }, { status: 400 });
     }
 
-    const koleksi = await dapatkanKoleksi("emails");
+    const koleksi = await DapatkanKoleksi("emails");
     await koleksi.insertOne({ email, dibuatPada: new Date() });
 
     return NextResponse.json({ sukses: true, pesan: "Email disimpan" }, { status: 201 });
