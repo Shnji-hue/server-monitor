@@ -6,7 +6,19 @@ const SMTP_USER = process.env.SMTP_USER;
 const SMTP_PASS = process.env.SMTP_PASS;
 const FROM = process.env.EMAIL_FROM ?? "no-reply@example.com";
 
+// Number of seconds to enforce cooldown between Resend sends per recipient (default 1 hour)
+const RESEND_COOLDOWN_SECONDS = Number(process.env.RESEND_COOLDOWN_SECONDS ?? 3600);
+// In-memory map tracking last Resend send timestamp (ms) per recipient.
+// NOTE: This is per-process only. For multi-instance deployments, use a shared store (Redis, DB) to coordinate.
+const lastResendSentAt: Map<string, number> = new Map();
+
 let transporter: nodemailer.Transporter | null = null;
+
+// Log environment detection for email transport selection
+const RESEND_KEY_PRESENT = Boolean(process.env.RESEND_API_KEY);
+const SMTP_CONFIGURED = Boolean(SMTP_HOST && SMTP_USER && SMTP_PASS);
+// eslint-disable-next-line no-console
+console.info(`[email] NODE_ENV=${process.env.NODE_ENV ?? 'undefined'} RESEND_API_KEY=${RESEND_KEY_PRESENT ? 'set' : 'missing'} SMTP_CONFIGURED=${SMTP_CONFIGURED}`);
 
 function DapatkanTransporter() {
   if (transporter) return transporter;
@@ -83,8 +95,17 @@ async function KirimDenganCobaUlang(mailOptions: nodemailer.SendMailOptions, ret
 export async function KirimEmail(to: string, subject: string, text: string, html?: string) {
   const mailOptions: nodemailer.SendMailOptions = { from: FROM, to, subject, text, html };
 
+  const useResend = process.env.NODE_ENV === 'production' && Boolean(process.env.RESEND_API_KEY);
+  // eslint-disable-next-line no-console
+  console.info(`[email] send request: to=${to} subject="${subject}" useResend=${useResend ? 'yes' : 'no'} NODE_ENV=${process.env.NODE_ENV ?? 'undefined'} RESEND_API_KEY=${process.env.RESEND_API_KEY ? 'set' : 'missing'}`);
+
+  if (!useResend && process.env.NODE_ENV === 'production' && !process.env.RESEND_API_KEY) {
+    // eslint-disable-next-line no-console
+    console.warn('[email] production environment detected but RESEND_API_KEY is not set; falling back to SMTP');
+  }
+
   // Use Resend in production when configured; otherwise use SMTP (development or fallback)
-  if (process.env.NODE_ENV === 'production' && process.env.RESEND_API_KEY) {
+  if (useResend) {
     try {
       // dynamic import so dev environments without the package won't fail
       const mod = await import('resend');
@@ -101,9 +122,22 @@ export async function KirimEmail(to: string, subject: string, text: string, html
         html: html ?? `<pre>${text}</pre>`,
       } as any;
 
+      // Before sending with Resend, check per-recipient cooldown
+      const now = Date.now();
+      const last = lastResendSentAt.get(target);
+      if (last && (now - last) < RESEND_COOLDOWN_SECONDS * 1000) {
+        const until = new Date(last + RESEND_COOLDOWN_SECONDS * 1000).toISOString();
+        // eslint-disable-next-line no-console
+        console.info(`[email] Resend suppressed for ${target}; last sent at ${new Date(last).toISOString()}, next allowed at ${until}`);
+        // Do not send via Resend due to cooldown
+        return false;
+      }
+
       // eslint-disable-next-line no-console
       console.info('[email] sending via Resend to', target);
       const res = await resendClient.emails.send(payload);
+      // on success, record timestamp
+      lastResendSentAt.set(target, now);
       // eslint-disable-next-line no-console
       console.info('[email] Resend success id=', res?.id ?? res?.messageId ?? 'unknown');
       return true;
