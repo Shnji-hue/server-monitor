@@ -26,7 +26,6 @@ export async function GET(req: NextRequest) {
       { status: 200 }
     );
   } catch (err) {
-    // eslint-disable-next-line no-console
     console.error("Error di /api/server-status:", err);
     return NextResponse.json({ sukses: false, pesan: "Gagal mengambil status server" }, { status: 500 });
   }

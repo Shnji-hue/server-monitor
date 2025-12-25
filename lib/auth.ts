@@ -1,6 +1,8 @@
 import crypto from "crypto";
 import { DapatkanKoleksi } from "./mongodb";
 
+// Modul autentikasi dan sesi. Modul ini menangani pembuatan user dan pengelolaan sesi.
+// Semua password di-hash dan sesi disimpan di koleksi 'sessions' untuk validasi server-side.
 type User = {
   _id?: any;
   email: string;
@@ -8,6 +10,8 @@ type User = {
   createdAt?: Date;
 };
 
+// Buat user baru dengan cek email unik dan simpan hash password ke koleksi 'users'.
+// Jika email sudah terdaftar, fungsi ini akan melempar error.
 export async function BuatUser(email: string, password: string) {
   const koleksi = await DapatkanKoleksi<User>("users");
   const exist = await koleksi.findOne({ email });
@@ -18,17 +22,23 @@ export async function BuatUser(email: string, password: string) {
   return { id: res.insertedId, email };
 }
 
+// Cari user berdasarkan email dari koleksi 'users'.
+// Fungsi ini digunakan saat login atau cek eksistensi email.
 export async function TemukanUserByEmail(email: string) {
   const koleksi = await DapatkanKoleksi<User>("users");
   return koleksi.findOne({ email });
 }
 
+// Hash password dengan membuat salt acak dan derive key menggunakan scrypt.
+// Hasilnya dikembalikan dalam format 'salt:hash' sehingga tidak menyimpan password plain.
 export function HashPassword(password: string) {
   const salt = crypto.randomBytes(16).toString("hex");
   const derived = crypto.scryptSync(password, salt, 64);
   return `${salt}:${derived.toString("hex")}`;
 }
 
+// Verifikasi password dengan men-derive hash dari salt yang tersimpan dan membandingkan secara timing-safe.
+// Fungsi ini mengembalikan true jika password cocok, dan false jika tidak.
 export function VerifyPassword(password: string, stored: string) {
   const [salt, hash] = stored.split(":");
   if (!salt || !hash) return false;
@@ -36,7 +46,8 @@ export function VerifyPassword(password: string, stored: string) {
   return crypto.timingSafeEqual(Buffer.from(hash, "hex"), Buffer.from(derived, "hex"));
 }
 
-// Sessions
+// Buat session: buat token acak dan simpan ke koleksi 'sessions' dengan waktu kadaluarsa.
+// Token ini dipakai untuk autentikasi user di request berikutnya.
 export async function BuatSession(userId: any) {
   const koleksi = await DapatkanKoleksi("sessions");
   const token = crypto.randomBytes(32).toString("hex");
@@ -52,6 +63,8 @@ export async function BuatSession(userId: any) {
   return { token, expiresAt: doc.expiresAt };
 }
 
+// Temukan session berdasarkan token dan hapus jika sudah kadaluarsa.
+// Fungsi ini mengembalikan sesi jika valid, atau null jika tidak ditemukan atau sudah expired.
 export async function TemukanSession(token: string) {
   const koleksi = await DapatkanKoleksi("sessions");
   if (!token) return null;
@@ -64,14 +77,17 @@ export async function TemukanSession(token: string) {
   return sess;
 }
 
+// Hapus sesi dari DB (digunakan saat logout).
+// Jika token kosong, fungsi ini tidak melakukan apa-apa.
 export async function HapusSession(token: string) {
   if (!token) return;
   const koleksi = await DapatkanKoleksi("sessions");
   await koleksi.deleteOne({ token });
 }
 
+// Ambil daftar email unik dari sesi yang belum kadaluarsa.
+// Berguna untuk mengirim notifikasi ke user yang sedang aktif.
 export async function AmbilEmailUserDariSesiAktif() {
-  // Kembalikan daftar email unik dari sesi aktif (ungrouped)
   const koleksi = await DapatkanKoleksi("sessions");
   const usersCol = await DapatkanKoleksi<User>("users");
   const sekarang = new Date();
@@ -82,8 +98,9 @@ export async function AmbilEmailUserDariSesiAktif() {
   return users.map((u) => u.email);
 }
 
+// Ambil info user (id dan email) berdasarkan token sesi yang valid.
+// Jika token tidak valid atau terjadi error, fungsi ini mengembalikan null.
 export async function AmbilUserDariToken(token: string) {
-  // Ambil user singkat (email, id) berdasarkan token sesi (server-side helper)
   try {
     const sess = await TemukanSession(token);
     if (!sess) return null;

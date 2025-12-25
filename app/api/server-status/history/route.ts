@@ -1,7 +1,11 @@
+// Route ini mengembalikan riwayat server yang tersimpan di koleksi 'history'.
+// Gunakan query parameter `limit` untuk jumlah data dan `metric` untuk meminta satu metrik saja.
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { DapatkanKoleksi } from "../../../../lib/mongodb";
 
+// Handler GET: baca query, ambil dokumen dari DB, lalu format hasil sesuai permintaan.
+// Mengembalikan array objek lengkap atau pasangan {waktu, value} saat `metric` dipakai.
 export async function GET(req: NextRequest) {
   try {
     const url = new URL(req.url);
@@ -12,7 +16,8 @@ export async function GET(req: NextRequest) {
     const koleksi = await DapatkanKoleksi("history");
     const docs = await koleksi.find().sort({ waktu: -1 }).limit(limit).toArray();
 
-    // Jika metric diberikan, kembalikan array sederhana { waktu, value }
+    // Jika metric diberikan, periksa validitas dan ubah dokumen menjadi {waktu, value} yang terurut lama->baru.
+    // Jika metric tidak valid, kembalikan status 400 dengan pesan error.
     if (metric) {
       const allowed = new Set(["cpu", "mem", "disk", "suhu"]);
       if (!allowed.has(metric)) {
@@ -29,7 +34,8 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ sukses: true, data: hasilMetric }, { status: 200 });
     }
 
-    // Map dokumen ke format BacaanServer (backwards compatible)
+    // Jika tidak ada metric, ubah dokumen menjadi format BacaanServer dan urutkan dari lama ke baru.
+    // Format ini cocok untuk chart yang membutuhkan objek lengkap per bacaan.
     const hasil = docs
       .map((d: any) => ({
         waktu: d.waktu instanceof Date ? d.waktu.getTime() : new Date(d.waktu).getTime(),

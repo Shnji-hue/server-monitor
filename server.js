@@ -12,7 +12,6 @@ const port = parseInt(process.env.PORT ?? '3000', 10);
 function GetSocketSecret() {
   return process.env.SOCKET_AUTH_SECRET || 'please_set_SOCKET_AUTH_SECRET_in_env';
 }
-// Note: do not read the secret at import time, Next may load .env later in dev mode
 
 
 // Simple in-memory rate limiter per socket id

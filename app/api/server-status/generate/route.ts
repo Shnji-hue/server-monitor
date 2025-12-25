@@ -7,7 +7,6 @@ export async function POST(_req: NextRequest) {
     const bacaan = await PemantauServerSingleton.buatBacaanSekali();
     return NextResponse.json({ sukses: true, data: bacaan }, { status: 200 });
   } catch (err) {
-    // eslint-disable-next-line no-console
     console.error("[/api/server-status/generate] Error:", err);
     return NextResponse.json({ sukses: false, pesan: "Gagal membuat bacaan" }, { status: 500 });
   }

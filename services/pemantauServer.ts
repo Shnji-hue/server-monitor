@@ -2,61 +2,62 @@ import { DapatkanKoleksi } from "../lib/mongodb";
 import { AmbilEmailUserDariSesiAktif } from "../lib/auth";
 import { KirimEmail } from "../lib/email";
 
-// Tipe data bacaan server (disesuaikan agar mudah dikonsumsi Chart.js/Recharts)
+// Service pemantau server (simulasi) yang membuat bacaan berkala dan menyimpannya ke DB.
+// Juga mengirim alert via email ke user aktif dengan pembatasan frekuensi sederhana.
 export type BacaanServer = {
-  waktu: number; // timestamp (ms)
-  cpu: number; // persentase 0-100
-  mem: number; // persentase 0-100
-  disk: number; // persentase 0-100
-  suhu: number; // derajat Celcius
+  waktu: number;
+  cpu: number;
+  mem: number;
+  disk: number;
+  suhu: number;
   alert?: boolean;
   pesanAlert?: string | null;
 };
 
+// Menyimpan riwayat bacaan di memori untuk respons cepat ke klien.
+// Riwayat dibatasi agar tidak memakai terlalu banyak memori.
 class PemantauServer {
   private riwayat: BacaanServer[] = [];
-  private batasRiwayat = 300; // jumlah titik maksimum di memori (mis. 300 * 2s = 10 menit)
+  private batasRiwayat = 300;
   private pembuatInterval: NodeJS.Timeout | null = null;
   private alertTerakhir: BacaanServer | null = null;
-  private terakhirPembersihan = 0; // timestamp ms terakhir pembersihan manual
+  private terakhirPembersihan = 0;
 
-  // Email rate limiting: track last email sent time (ms) and minimum interval
-  private terakhirEmailAt = 0; // timestamp ms terakhir email terkirim
-  // Default minimum interval: 3 minutes (180000 ms). Can be overridden via env EMAIL_MIN_INTERVAL_MS
+  // Menyimpan timestamp terakhir kirim email untuk rate-limiting sederhana.
+  // Nilai minimal jeda bisa diatur lewat env `EMAIL_MIN_INTERVAL_MS`.
+  private terakhirEmailAt = 0;
   private emailMinInterval = Number(process.env.EMAIL_MIN_INTERVAL_MS ?? 3 * 60 * 1000); // default 3 minutes
 
+  // Saat kelas dibuat, persiapkan index DB dan mulai simulasi bacaan.
+  // Ini memastikan koleksi siap sebelum mulai menyimpan data.
   constructor() {
-    // Debug: konfirmasi inisialisasi
-    // eslint-disable-next-line no-console
     console.info("[PemantauServer] Inisialisasi PemantauServer, mempersiapkan koleksi dan memulai simulasi...");
-    // Pastikan koleksi/index siap, lalu mulai simulasi
     void this.setupKoleksiDanMulai();
   }
 
+  // Buat index pada koleksi (TTL untuk history dan index waktu untuk alerts).
+  // Setelah index dibuat, mulai loop simulasi.
   private async setupKoleksiDanMulai() {
     try {
       const koleksiRiwayat = await DapatkanKoleksi("history");
       // Buat TTL index agar dokumen lebih dari 1 hari otomatis dihapus (86400 detik)
       await koleksiRiwayat.createIndex({ waktu: 1 }, { expireAfterSeconds: 86400 });
 
-      // Index waktu pada alerts juga berguna
+      // Index waktu pada alerts juga berguna untuk query terbaru
       const koleksiAlerts = await DapatkanKoleksi("alerts");
       await koleksiAlerts.createIndex({ waktu: 1 });
     } catch (err) {
-      // eslint-disable-next-line no-console
       console.error("[PemantauServer] Gagal membuat index koleksi:", err);
     }
 
     this.mulaiSimulasi();
   }
 
-  // Mulai simulasi (setInterval tiap 2 detik)
+  // Mulai simulasi: buat bacaan awal lalu jalankan loop setiap 2 detik.
+  // Jika simulasi sudah berjalan, jangan mulai ulang.
   public mulaiSimulasi() {
     if (this.pembuatInterval) return;
-
-    // Buat bacaan awal segera agar klien tidak mendapatkan data kosong
     void this.buatBacaan().catch((err) => {
-      // eslint-disable-next-line no-console
       console.error("[PemantauServer] Gagal membuat bacaan awal:", err);
     });
 
@@ -65,7 +66,8 @@ class PemantauServer {
     }, 2000);
   }
 
-  // Hentikan (untuk keperluan test atau cleanup)
+  // Hentikan simulasi dan bersihkan interval (digunakan saat shutdown atau testing).
+  // Ini mencegah proses tetap berjalan setelah dihentikan.
   public hentikanSimulasi() {
     if (this.pembuatInterval) {
       clearInterval(this.pembuatInterval);
@@ -73,7 +75,8 @@ class PemantauServer {
     }
   }
 
-  // expose untuk testing: buat satu bacaan secara manual
+  // Buat satu bacaan secara sinkron dan kembalikan status terbaru.
+  // Berguna untuk endpoint yang butuh data on-demand.
   public async buatBacaanSekali(): Promise<BacaanServer> {
     await this.buatBacaan();
     const terbaru = this.ambilStatusTerbaru();
@@ -81,7 +84,8 @@ class PemantauServer {
     return terbaru;
   }
 
-  // Menghasilkan bacaan acak dan memeriksa alert threshold
+  // Inti: buat bacaan acak, tentukan apakah ini alert, simpan ke DB, dan kirim notifikasi jika perlu.
+  // Alert dicatat di koleksi 'alerts' dan email dikirim ke user aktif dengan pembatasan frekuensi.
   private async buatBacaan() {
     const bacaan: BacaanServer = {
       waktu: Date.now(),
@@ -93,7 +97,7 @@ class PemantauServer {
       pesanAlert: null,
     };
 
-    // Logika alert: CPU > 90% atau suhu > 80°C
+    // Logika alert sederhana: CPU > 90% atau suhu > 80°C
     if (bacaan.cpu > 90) {
       bacaan.alert = true;
       bacaan.pesanAlert = `CPU tinggi: ${bacaan.cpu.toFixed(1)}%`;
@@ -105,7 +109,6 @@ class PemantauServer {
     }
 
     // Debug: ringkasan singkat bacaan
-    // eslint-disable-next-line no-console
     console.debug("[PemantauServer] Bacaan baru:", {
       waktu: bacaan.waktu,
       cpu: +bacaan.cpu.toFixed(1),
@@ -113,11 +116,11 @@ class PemantauServer {
       alert: bacaan.alert,
     });
 
-    // Simpan ke riwayat lokal
+    // Simpan ke riwayat lokal (in-memory)
     this.riwayat.push(bacaan);
     if (this.riwayat.length > this.batasRiwayat) this.riwayat.shift();
 
-    // Persist ke MongoDB collection 'history'
+    // Persist ke MongoDB collection 'history' (dokumen menyimpan waktu sebagai Date)
     try {
       const koleksiRiwayat = await DapatkanKoleksi("history");
       await koleksiRiwayat.insertOne({
@@ -130,11 +133,10 @@ class PemantauServer {
         pesan: bacaan.pesanAlert ?? null,
       });
     } catch (err) {
-      // eslint-disable-next-line no-console
       console.error("[PemantauServer] Gagal menyimpan riwayat ke DB:", err);
     }
 
-    // Jika ada alert, simpan juga ke koleksi 'alerts' dan simpan alertTerakhir
+    // Jika ada alert, simpan juga ke koleksi 'alerts' dan kirim notifikasi (rate-limited)
     if (bacaan.alert) {
       const isNewAlert = !this.alertTerakhir || this.alertTerakhir.waktu !== bacaan.waktu;
       // Simpan ke DB
@@ -147,7 +149,6 @@ class PemantauServer {
           pesan: bacaan.pesanAlert,
         });
       } catch (err) {
-        // eslint-disable-next-line no-console
         console.error("[PemantauServer] Gagal menyimpan alert ke DB:", err);
       }
 
@@ -158,16 +159,16 @@ class PemantauServer {
           const now = Date.now();
           const sinceLast = now - this.terakhirEmailAt;
           if (sinceLast < this.emailMinInterval) {
-            // eslint-disable-next-line no-console
             console.info(
               `[PemantauServer] Lewati pengiriman email (terakhir ${sinceLast}ms lalu < ${this.emailMinInterval}ms)`
             );
           } else {
-            const emails = (await AmbilEmailUserDariSesiAktif()).slice(0, 1); // quick fix: send only to the first active session
+            // Ambil email user dari sesi aktif (hanya kirim ke penerima pertama sebagai quick-fix)
+            const emails = (await AmbilEmailUserDariSesiAktif()).slice(0, 1);
             if (emails.length) {
               // perbarui timestamp hanya jika kita benar-benar akan mengirim
               this.terakhirEmailAt = now;
-              // kirim email tanpa menahan loop (fire & forget) - only to the first recipient
+              // Kirim email tanpa menahan loop (fire & forget)
               void Promise.all(
                 emails.map((to) =>
                   KirimEmail(
@@ -180,7 +181,6 @@ class PemantauServer {
             }
           }
         } catch (err) {
-          // eslint-disable-next-line no-console
           console.error("[PemantauServer] Gagal mengirim notifikasi email:", err);
         }
       }
@@ -194,11 +194,9 @@ class PemantauServer {
         const cutoff = new Date(sekarang - 24 * 60 * 60 * 1000);
         await koleksiRiwayat.deleteMany({ waktu: { $lt: cutoff } });
         this.terakhirPembersihan = sekarang;
-        // eslint-disable-next-line no-console
         console.info("[PemantauServer] Pembersihan riwayat: dokumen lebih dari 1 hari dihapus (fallback)");
       }
     } catch (err) {
-      // eslint-disable-next-line no-console
       console.error("[PemantauServer] Gagal menjalankan pembersihan fallback:", err);
     }
   }

@@ -1,7 +1,11 @@
+// Route pendaftaran: menerima email dan password lalu membuat user baru bila data valid.
+// Jika berhasil, server menyimpan user ke koleksi 'users' dan mengembalikan id serta email.
 import { NextResponse } from "next/server";
 import { NextRequest } from "next/server";
 import { BuatUser, TemukanUserByEmail } from "../../../../lib/auth";
 
+// Handler POST untuk register: validasi input, cek email unik, lalu buat user baru.
+// Mengembalikan 201 saat berhasil atau kode error bila input salah atau email sudah terdaftar.
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -15,7 +19,6 @@ export async function POST(req: NextRequest) {
     const user = await BuatUser(email, password);
     return NextResponse.json({ sukses: true, data: { id: user.id, email: user.email } }, { status: 201 });
   } catch (err: any) {
-    // eslint-disable-next-line no-console
     console.error("[/api/auth/register]", err);
     return NextResponse.json({ sukses: false, pesan: "Gagal mendaftar" }, { status: 500 });
   }

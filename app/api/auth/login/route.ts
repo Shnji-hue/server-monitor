@@ -1,13 +1,19 @@
+// Route untuk login: memeriksa email dan password lalu membuat sesi bila valid.
+// Jika login berhasil, server mengembalikan cookie session untuk dipakai di request berikutnya.
 import { NextResponse } from "next/server";
 import { NextRequest } from "next/server";
 import { TemukanUserByEmail, VerifyPassword, BuatSession } from "../../../../lib/auth";
 
+// Bangun header Set-Cookie untuk menyimpan token session di browser.
+// Mengatur HttpOnly, Path, Max-Age, SameSite, dan Secure (jika production).
 function BuildCookieHeader(token: string, maxAgeSeconds: number) {
   const secure = process.env.NODE_ENV === "production";
   const sameSite = "Lax";
   return `session=${token}; Path=/; HttpOnly; Max-Age=${maxAgeSeconds}; SameSite=${sameSite}; ${secure ? "Secure;" : ""}`;
 }
 
+// Handler POST untuk login: ambil email/password dari body, cek kredensial, lalu buat sesi bila valid.
+// Mengembalikan response sukses dan set cookie session, atau pesan error bila gagal.
 export async function POST(req: NextRequest) {
   try {
     const { email = "", password = "" } = await req.json();
@@ -24,7 +30,6 @@ export async function POST(req: NextRequest) {
     res.headers.set("Set-Cookie", BuildCookieHeader(sess.token, maxAge));
     return res;
   } catch (err) {
-    // eslint-disable-next-line no-console
     console.error("[/api/auth/login]", err);
     return NextResponse.json({ sukses: false, pesan: "Gagal melakukan login" }, { status: 500 });
   }
